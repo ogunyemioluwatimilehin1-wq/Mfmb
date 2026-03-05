@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church Group - Bible Reading Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .review-card { animation: slideIn 0.4s ease-out; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .book-tab { transition: all 0.3s; cursor: pointer; }
+        .book-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(1.05);
+        }
+        .day-tab { transition: all 0.3s; cursor: pointer; }
+        .day-tab.active {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        .day-tab.completed { background: #10b981; color: white; }
+        .student-row { transition: all 0.3s ease; }
+        .student-row:hover { transform: translateX(5px); }
+        .status-done { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .status-pending { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .meter-fill { transition: width 0.5s ease-out; }
+        .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <i class="fas fa-church text-2xl"></i>
+                        <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full pulse-ring"></div>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold">Church Group Tracker</h1>
+                        <p class="text-xs text-white/80 flex items-center gap-1">
+                            <i class="fas fa-book-open"></i> <span id="currentBookDisplay">Matthew</span>
+                        </p>
+                    </div>
+                </div>
+                <button onclick="showPasswordModal()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                    <i class="fas fa-lock"></i>
+                    <span class="hidden sm:inline">Admin</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        <!-- Book Selector -->
+        <div class="bg-white rounded-xl shadow-md p-4 mb-6">
+            <h3 class="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Select Book</h3>
+            <div class="flex gap-2 overflow-x-auto pb-2" id="bookSelector"></div>
+        </div>
+
+        <!-- Current Assignment Card -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6 border-l-4 border-indigo-500">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <span class="text-indigo-600 font-semibold text-sm uppercase tracking-wide">Today's Assignment</span>
+                    <h2 id="assignmentTitle" class="text-2xl font-bold text-gray-800 mt-1">Matthew 1</h2>
+                </div>
+                <div class="text-right">
+                    <div id="completionBadge" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium">
+                        <i class="fas fa-users mr-1"></i> <span id="completionRate">0/0</span> Done
+                    </div>
+                </div>
+            </div>
+            <p id="assignmentDesc" class="text-gray-600 leading-relaxed mb-4">
+                Read Matthew chapter 1. Focus on the genealogy of Jesus Christ and the birth narrative.
+            </p>
+            <div class="flex gap-4 text-sm text-gray-500">
+                <span><i class="fas fa-calendar-day mr-1"></i> <span id="currentDate">Today</span></span>
+                <span><i class="fas fa-book mr-1"></i> <span id="chapterInfo">Chapter 1 of 28</span></span>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="grid lg:grid-cols-3 gap-6">
+            <!-- Left: Progress & Controls -->
+            <div class="lg:col-span-1 space-y-4">
+                <!-- Day Navigator -->
+                <div class="bg-white rounded-xl shadow-lg p-5">
+                    <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <i class="fas fa-calendar-week text-indigo-500"></i> Chapters
+                    </h3>
+                    <div class="grid grid-cols-7 gap-2" id="dayGrid"></div>
+                </div>
+
+                <!-- Class Progress -->
+                <div class="bg-white rounded-xl shadow-lg p-5">
+                    <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-clipboard-check text-indigo-500"></i> Class Progress
+                    </h3>
+                    <div id="studentProgressList" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    <div class="mt-4 pt-4 border-t">
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="text-gray-600">Completion</span>
+                            <span id="progressPercent" class="font-bold text-indigo-600">0%</span>
+                        </div>
+                        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div id="progressBar" class="h-full bg-indigo-500 meter-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Missing Students -->
+                <div id="missingSection" class="bg-red-50 rounded-xl shadow p-5 border border-red-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-bold text-red-800 flex items-center gap-2">
+                            <i class="fas fa-exclamation-circle"></i> Missing (<span id="missingCount">0</span>)
+                        </h3>
+                        <button onclick="sendReminders()" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm flex items-center gap-1 hover:bg-blue-700 transition">
+                            <i class="fas fa-envelope"></i> Remind
+                        </button>
+                    </div>
+                    <ul id="missingList" class="space-y-2 text-sm text-red-700 max-h-48 overflow-y-auto"></ul>
+                </div>
+            </div>
+
+            <!-- Right: Submission Form -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-pen-fancy text-indigo-500"></i> Submit Reflection
+                    </h3>
+
+                    <!-- Student Selection -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Your Name</label>
+                        <select id="studentSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white">
+                            <option value="">-- Choose your name --</option>
+                        </select>
+                        <p id="alreadySubmittedMsg" class="hidden mt-2 text-sm text-green-600 flex items-center gap-1">
+                            <i class="fas fa-check-circle"></i> You already submitted this chapter!
+                        </p>
+                    </div>
+
+                    <!-- AI Detection Panel -->
+                    <div id="aiPanel" class="mb-4 bg-gray-50 rounded-xl p-4 border border-gray-200 hidden">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div id="aiIcon" class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <i class="fas fa-robot text-gray-500"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-sm text-gray-800">AI Detection</h4>
+                                    <p id="aiVerdict" class="text-xs text-gray-500">Analyzing...</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div id="aiScore" class="text-2xl font-bold text-gray-400">--%</div>
+                            </div>
+                        </div>
+                        <div class="space-y-2 mb-3">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-gray-600">Perplexity</span>
+                                    <span id="perplexityValue" class="font-medium">--</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="perplexityBar" class="h-full bg-blue-500 meter-fill" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-gray-600">Burstiness</span>
+                                    <span id="burstinessValue" class="font-medium">--</span>
+                                </div>
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div id="burstinessBar" class="h-full bg-purple-500 meter-fill" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="aiWarning" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                            <i class="fas fa-exclamation-triangle mr-1"></i> <strong>AI detected.</strong> Please write your own reflection.
+                        </div>
+                    </div>
+
+                    <form id="reviewForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Your Reflection <span class="text-xs text-gray-400">(AI detection active)</span></label>
+                            <textarea id="reviewText" required rows="6" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 resize-none" placeholder="Share what you learned from today's reading..."></textarea>
+                            <div class="flex justify-between mt-1 text-xs text-gray-400">
+                                <span id="wordCount">0 words</span>
+                                <span id="typingStatus">Ready</span>
+                            </div>
+                        </div>
+
+                        <div id="submissionWarning" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                            <i class="fas fa-robot text-amber-500 text-xl"></i>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-amber-800 mb-1">AI Warning</h4>
+                                <p class="text-sm text-amber-700 mb-2">This appears AI-generated.</p>
+                                <label class="flex items-center gap-2 text-sm text-amber-800 cursor-pointer">
+                                    <input type="checkbox" id="aiConfirm" class="rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                                    <span>I confirm this is my original work</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50">
+                            <i class="fas fa-paper-plane"></i> Submit Reflection
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Today's Submissions -->
+                <div class="mt-6 bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-comments text-indigo-500"></i> Submissions for <span id="submissionBookChapter">Matthew 1</span>
+                    </h3>
+                    <div id="todaySubmissions" class="space-y-3">
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fas fa-inbox text-3xl mb-2"></i>
+                            <p class="text-sm">No submissions yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-lock text-2xl text-indigo-600"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800">Admin Access</h3>
+                <p class="text-sm text-gray-500 mt-1">Enter password to manage settings</p>
+            </div>
+            <div class="space-y-4">
+                <input type="password" id="adminPassword" placeholder="Enter password" class="w-full px-4 py-3 border border-gray-300 rounded-lg text-center text-lg">
+                <p id="passwordError" class="hidden text-sm text-red-600 text-center"><i class="fas fa-exclamation-circle"></i> Incorrect password</p>
+                <button onclick="checkPassword()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">Unlock</button>
+                <button onclick="hidePasswordModal()" class="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition text-sm">Cancel</button>
+            </div>
+            <p class="text-xs text-gray-400 text-center mt-4">Default: "church123"</p>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div id="adminModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b sticky top-0 bg-white rounded-t-2xl z-10">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-cog text-indigo-500"></i> Admin Dashboard</h3>
+                    <button onclick="toggleAdminMode()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+                </div>
+            </div>
+            <div class="p-6 space-y-6">
+                <!-- Security -->
+                <div class="bg-indigo-50 rounded-xl p-5">
+                    <h4 class="font-semibold text-indigo-900 mb-3 flex items-center gap-2"><i class="fas fa-key"></i> Security</h4>
+                    <div class="flex gap-2">
+                        <input type="password" id="newPassword" placeholder="New admin password" class="flex-1 px-3 py-2 border border-indigo-200 rounded-lg">
+                        <button onclick="changePassword()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition text-sm">Update</button>
+                    </div>
+                </div>
+
+                <!-- Students -->
+                <div class="bg-green-50 rounded-xl p-5">
+                    <h4 class="font-semibold text-green-900 mb-3 flex items-center gap-2"><i class="fas fa-users"></i> Manage Students</h4>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="newStudentName" placeholder="Student name" class="flex-1 px-3 py-2 border border-green-200 rounded-lg">
+                        <input type="email" id="newStudentEmail" placeholder="Email (optional)" class="flex-1 px-3 py-2 border border-green-200 rounded-lg text-sm">
+                        <button onclick="addStudent()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div id="adminStudentList" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                </div>
+
+                <!-- Books -->
+                <div class="bg-amber-50 rounded-xl p-5">
+                    <h4 class="font-semibold text-amber-900 mb-3 flex items-center gap-2"><i class="fas fa-bible"></i> Bible Books</h4>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="newBookName" placeholder="Book name" class="flex-1 px-3 py-2 border border-amber-200 rounded-lg">
+                        <input type="number" id="newBookChapters" placeholder="Chapters" min="1" max="150" class="w-24 px-3 py-2 border border-amber-200 rounded-lg">
+                        <button onclick="addBook()" class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div id="bookList" class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto"></div>
+                </div>
+
+                <!-- Email -->
+                <div class="bg-blue-50 rounded-xl p-5">
+                    <h4 class="font-semibold text-blue-900 mb-3 flex items-center gap-2"><i class="fas fa-envelope"></i> Email Reminders</h4>
+                    <input type="email" id="adminEmail" placeholder="Your email (sender)" class="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm mb-3">
+                    <textarea id="emailTemplate" rows="3" placeholder="Email template..." class="w-full px-3 py-2 border border-blue-200 rounded-lg text-sm">Hi {name}, This is a reminder to complete: {chapter}. Please submit your reflection! Blessings, Church Group</textarea>
+                </div>
+
+                <!-- AI Settings -->
+                <div class="bg-gray-50 rounded-xl p-5">
+                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-robot"></i> AI Detection</h4>
+                    <select id="aiStrictness" class="w-full px-3 py-2 border rounded-lg text-sm" onchange="updateAISettings()">
+                        <option value="low">Low (Lenient)</option>
+                        <option value="medium" s
